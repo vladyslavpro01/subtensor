@@ -13,11 +13,15 @@ use sp_api::ProvideRuntimeApi;
 
 pub use subtensor_custom_rpc_runtime_api::{
     DelegateInfoRuntimeApi, NeuronInfoRuntimeApi, SubnetInfoRuntimeApi,
-    SubnetRegistrationRuntimeApi,
+    SubnetRegistrationRuntimeApi,EpochRuntimeApi
 };
+
 
 #[rpc(client, server)]
 pub trait SubtensorCustomApi<BlockHash> {
+    #[method(name = "epoch")]
+    fn epoch(&self, netuid: u16, incentive: bool, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
+
     #[method(name = "delegateInfo_getDelegates")]
     fn get_delegates(&self, at: Option<BlockHash>) -> RpcResult<Vec<u8>>;
     #[method(name = "delegateInfo_getDelegate")]
@@ -90,6 +94,33 @@ impl From<Error> for i32 {
         }
     }
 }
+
+impl<C, Block> SubtensorCustomApiServer<<Block as BlockT>::Hash> for SubtensorCustom<C, Block>
+where
+    Block: BlockT,
+    C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + Send + Sync + 'static,
+    C::Api:EpochRuntimeApi<Block>,  
+{
+
+
+    fn epoch(&self, netuid: u16, incentive: bool, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<u8>> {
+        let api = self.client.runtime_api();
+        let at = at.unwrap_or_else(|| self.client.info().best_hash);
+
+        // Call the epoch function from runtime API
+        let result = api.epoch(at, netuid, incentive).map_err(|e| {
+            Error::RuntimeError(format!("Unable to fetch epoch data: {:?}", e)).into()
+        })?;
+
+        // Convert the result into Vec<u8> to comply with RpcResult
+        let result_bytes = serde_json::to_vec(&result).map_err(|e| {
+            Error::RuntimeError(format!("Failed to serialize epoch data: {:?}", e)).into()
+        })?;
+
+        Ok(result_bytes)
+    }
+}
+
 
 impl<C, Block> SubtensorCustomApiServer<<Block as BlockT>::Hash> for SubtensorCustom<C, Block>
 where
