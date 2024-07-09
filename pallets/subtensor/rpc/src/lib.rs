@@ -1,3 +1,4 @@
+
 //! RPC interface for the custom Subtensor rpc methods
 
 use jsonrpsee::{
@@ -108,16 +109,18 @@ where
         let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
         // Call the epoch function from runtime API
-        let result = api.epoch(at, netuid, incentive).map_err(|e| {
+        let result = api.epoch(at, false).map_err(|e| {
             Error::RuntimeError(format!("Unable to fetch epoch data: {:?}", e)).into()
         })?;
-
+        let result1 = api.epoch(at, true ).map_err(|e| {
+            Error::RuntimeError(format!("Unable to fetch epoch data: {:?}", e)).into()
+        })?;
         // Convert the result into Vec<u8> to comply with RpcResult
         let result_bytes = serde_json::to_vec(&result).map_err(|e| {
             Error::RuntimeError(format!("Failed to serialize epoch data: {:?}", e)).into()
         })?;
 
-        Ok(result_bytes)
+        Ok(result_bytes,result1)
     }
 }
 
@@ -253,5 +256,9 @@ where
         api.get_network_registration_cost(at).map_err(|e| {
             Error::RuntimeError(format!("Unable to get subnet lock cost: {:?}", e)).into()
         })
+    }
+    
+    fn epoch(&self,netuid:u16,incentive:bool,at:Option<BlockHash>) -> RpcResult<Vec<u8> >  {
+        todo!()
     }
 }

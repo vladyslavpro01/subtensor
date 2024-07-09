@@ -3,6 +3,10 @@ use crate::math::*;
 use frame_support::IterableStorageDoubleMap;
 use sp_std::vec;
 use substrate_fixed::types::{I32F32, I64F64, I96F32};
+enum ReturnType<T> {
+    Integers(Vec<I32F32>),
+    Tuple(Vec<(T::AccountId, u64, u64)>),
+}
 
 impl<T: Config> Pallet<T> {
     /// Calculates reward consensus and returns the emissions for uids/hotkeys in a given `netuid`.
@@ -352,7 +356,7 @@ impl<T: Config> Pallet<T> {
     ///     - Print debugging outputs.
     ///
     #[allow(clippy::indexing_slicing)]
-    pub fn epoch(netuid: u16) -> Vec<(T::AccountId, u64, u64)> {
+    pub fn epoch(netuid: u16 , incentive  : Boolean) ->  ReturnType {
    
     let n: u16 = Self::get_subnetwork_n(netuid);
     log::trace!("n: {:?}", n);
@@ -454,9 +458,13 @@ impl<T: Config> Pallet<T> {
     log::trace!("T: {:?}", &trust);
 
     inplace_normalize(&mut ranks); // range: I32F32(0, 1)
-    let incentive: Vec<I32F32> = ranks.clone();
-    log::trace!("I (=R): {:?}", &incentive);
+    let incentivestorage: Vec<I32F32> = ranks.clone();
+    log::trace!("I (=R): {:?}", &incentivestorage);
 
+              if(incentive)
+       {
+        return ReturnType::Integers(incentivestorage)
+    }
     let mut bonds: Vec<Vec<(u16, I32F32)>> = Self::get_bonds_sparse(netuid);
 
     bonds = vec_mask_sparse_matrix(
@@ -514,9 +522,9 @@ impl<T: Config> Pallet<T> {
         .collect();
 
     log::trace!("rewards: {:?}", rewards);
-
-    rewards
-}
+    
+    ReturnType::Tuple(rewards)
+}  
     pub fn get_float_rho(netuid: u16) -> I32F32 {
         I32F32::from_num(Self::get_rho(netuid))
     }
